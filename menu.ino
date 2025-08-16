@@ -1,31 +1,22 @@
-// Your main file: menu.ino
-
-// Libraries
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <WiFi.h>
-
-// Include the header file you will create
 #include "weather.h"
+#include "time_helper.h" // Include your new time header file
 
-// TFT LCD object (defined once)
 TFT_eSPI tft = TFT_eSPI();
 
-// WiFi credentials (defined once)
-const char* ssid = "Dina";
-const char* password = "Dd78134003Segco";
+const char* ssid = "Galaxy A34 5G 58C7";
+const char* password = "3858nima";
 
-// Button pins (replace with your actual pins)
-const int BUTTON_UP_PIN = 21;
-const int BUTTON_DOWN_PIN = 22;
+const int BUTTON_UP_PIN = 22;
+const int BUTTON_DOWN_PIN = 21;
 const int BUTTON_SELECT_PIN = 23;
 
-// Menu options
 const char* menuItems[] = {"Weather", "Time", "Settings"};
 const int numMenuItems = 3;
 int currentSelection = 0;
 
-// Function to draw the menu
 void drawMenu() {
   tft.fillScreen(TFT_BLACK);
   tft.setTextSize(3);
@@ -51,7 +42,6 @@ void setup() {
   pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
   pinMode(BUTTON_SELECT_PIN, INPUT_PULLUP);
 
-  // Connect to WiFi in setup()
   tft.setCursor(0, 0);
   tft.setTextColor(TFT_WHITE);
   tft.setTextSize(2);
@@ -62,13 +52,13 @@ void setup() {
     tft.print(".");
   }
   tft.println("\nWiFi connected!");
+  configTime(12600, 0, "pool.ntp.org");
   delay(1000);
 
   drawMenu();
 }
 
 void loop() {
-  // Read button states
   if (digitalRead(BUTTON_UP_PIN) == LOW) {
     currentSelection--;
     if (currentSelection < 0) currentSelection = numMenuItems - 1;
@@ -84,19 +74,25 @@ void loop() {
   }
 
   if (digitalRead(BUTTON_SELECT_PIN) == LOW) {
-    if (currentSelection == 0) { // "Weather" is the first item (index 0)
+    if (currentSelection == 0) { // Weather
       WeatherData data;
-      // Get and display weather data
       if (getWeatherData(data)) {
         displayWeather(tft, data);
       } else {
-        // Handle error
+        tft.fillScreen(TFT_RED);
+        tft.setCursor(0, 0);
+        tft.setTextColor(TFT_WHITE);
+        tft.setTextSize(2);
+        tft.println("Failed to get weather data.");
+        delay(2000);
       }
-      delay(5000); // Display weather for 5 seconds
-      drawMenu(); // Go back to the menu
+      delay(5000);
+      drawMenu();
+    } else if (currentSelection == 1) { // Time
+      runClock(tft);
+      delay(5000);
+      drawMenu();
     }
-    // You can add more 'if' statements for other menu items here
-    
     delay(250);
   }
 }
