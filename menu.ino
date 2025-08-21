@@ -2,18 +2,15 @@
 #include <TFT_eSPI.h>
 #include <WiFi.h>
 #include "weather.h"
-#include "time_helper.h" // Include your new time header file
+#include "time_helper.h" 
+#include "ping_pong.h"
 
 TFT_eSPI tft = TFT_eSPI();
 
 const char* ssid = "Galaxy A34 5G 58C7";
 const char* password = "3858nima";
 
-const int BUTTON_UP_PIN = 22;
-const int BUTTON_DOWN_PIN = 21;
-const int BUTTON_SELECT_PIN = 23;
-
-const char* menuItems[] = {"Weather", "Time", "Settings"};
+const char* menuItems[] = {"Weather", "Time", "Ping pong"};
 const int numMenuItems = 3;
 int currentSelection = 0;
 
@@ -58,41 +55,65 @@ void setup() {
   drawMenu();
 }
 
+#define MODE_MENU 0
+#define MODE_WEATHER 1
+#define MODE_TIME 2
+#define MODE_PINGPONG 3
+
+int currentMode = MODE_MENU;
+
 void loop() {
   if (digitalRead(BUTTON_UP_PIN) == LOW) {
-    currentSelection--;
-    if (currentSelection < 0) currentSelection = numMenuItems - 1;
-    drawMenu();
+    if (currentMode == MODE_MENU) {
+      currentSelection--;
+      if (currentSelection < 0) currentSelection = numMenuItems - 1;
+      drawMenu();
+    }
     delay(250);
   }
 
   if (digitalRead(BUTTON_DOWN_PIN) == LOW) {
-    currentSelection++;
-    if (currentSelection >= numMenuItems) currentSelection = 0;
-    drawMenu();
+    if (currentMode == MODE_MENU) { // فقط در منو اجازه جابه‌جایی بده
+      currentSelection++;
+      if (currentSelection >= numMenuItems) currentSelection = 0;
+      drawMenu();
+    }
     delay(250);
   }
 
   if (digitalRead(BUTTON_SELECT_PIN) == LOW) {
-    if (currentSelection == 0) { // Weather
-      WeatherData data;
-      if (getWeatherData(data)) {
-        displayWeather(tft, data);
-      } else {
-        tft.fillScreen(TFT_RED);
-        tft.setCursor(0, 0);
-        tft.setTextColor(TFT_WHITE);
-        tft.setTextSize(2);
-        tft.println("Failed to get weather data.");
-        delay(2000);
+    delay(250); // تأخیر برای دبینسینگ
+
+    if (currentMode == MODE_MENU) { // اگر در منو هستیم
+      if (currentSelection == 0) { // آب و هوا
+        currentMode = MODE_WEATHER;
+        WeatherData data;
+        if (getWeatherData(data)) {
+          displayWeather(tft, data);
+        } else {
+          tft.fillScreen(TFT_RED);
+          tft.setCursor(0, 0);
+          tft.setTextColor(TFT_WHITE);
+          tft.setTextSize(2);
+          tft.println("Failed to get weather data.");
+          delay(2000);
+        }
+      } else if (currentSelection == 1) {
+        currentMode = MODE_TIME;
+        runClock(tft);
+      } else if (currentSelection == 2) {
+        currentMode = MODE_PINGPONG;
+        runPong();
       }
-      delay(5000);
-      drawMenu();
-    } else if (currentSelection == 1) { // Time
-      runClock(tft);
-      delay(5000);
-      drawMenu();
+    } else {
+      if (currentMode == MODE_WEATHER || currentMode == MODE_TIME || currentMode == MODE_PINGPONG) {
+        currentMode = MODE_MENU;
+        drawMenu();
+      }
     }
-    delay(250);
+
+    while (digitalRead(BUTTON_SELECT_PIN) == LOW) {
+      delay(10);
+    }
   }
 }
